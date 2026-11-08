@@ -19,6 +19,7 @@
 #include "TextureHelper.h"
 #include "Win32Helper.h"
 #include "DLSSFrameGenerator.h"
+#include "DLSSGSm86Unlock.h"
 #include "NativeEffectBackend.h"
 #include "NativeEffectBackendFactory.h"
 #include "NvidiaOpticalFlowProvider.h"
@@ -1151,6 +1152,15 @@ HANDLE Renderer::_InitBackend() noexcept {
 
 	if (!_backendResources.Initialize(false)) {
 		return NULL;
+	}
+
+	// NGX resolves the frame-generation runtime on its first init in the process, so the
+	// unlock has to be resident before any DLSS effect (upscaler or FG) initializes.
+	for (const EffectOption& effect : ScalingWindow::Get().Options().effects) {
+		if (IsDLSSFrameGenerationEffect(effect.name)) {
+			EnsureDLSSGSm86Unlock(_backendResources.GetGraphicsAdapter());
+			break;
+		}
 	}
 	
 	ID3D11Device5* d3dDevice = _backendResources.GetD3DDevice();
